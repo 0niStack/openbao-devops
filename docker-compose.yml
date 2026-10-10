@@ -1,0 +1,41 @@
+services:
+  openbao:
+    image: ghcr.io/openbao/openbao:${OPENBAO_VERSION:-latest}
+    container_name: openbao
+    restart: unless-stopped
+    command: ["server", "-config=/openbao/config/openbao.hcl"]
+    cap_add:
+      - IPC_LOCK
+    environment:
+      BAO_ADDR: "http://127.0.0.1:8200"
+    ports:
+      - "127.0.0.1:${OPENBAO_PORT:-8200}:8200"
+    volumes:
+      - openbao-data:/openbao/data
+      - ./config:/openbao/config:ro
+      - ./policies:/openbao/policies:ro
+    networks:
+      - bao-net
+
+  # Demo consumer. Start AFTER ./scripts/setup.sh has produced secrets/app.env
+  demo-app:
+    profiles: ["app"]
+    build: ./app
+    container_name: bao-demo-app
+    restart: unless-stopped
+    env_file:
+      - ./secrets/app.env
+    environment:
+      BAO_ADDR: "http://openbao:8200"
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - openbao
+    networks:
+      - bao-net
+
+volumes:
+  openbao-data:
+
+networks:
+  bao-net:
