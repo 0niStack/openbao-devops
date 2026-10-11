@@ -1,9 +1,18 @@
 services:
+  openbao-perms:
+    image: ghcr.io/openbao/openbao:${OPENBAO_VERSION:-latest}
+    user: root
+    entrypoint: ["sh", "-c", "chown -R 100:1000 /openbao/data && chmod 700 /openbao/data"]
+    volumes:
+      - openbao-data:/openbao/data
+    networks:
+      - bao-net
+
   openbao:
     image: ghcr.io/openbao/openbao:${OPENBAO_VERSION:-latest}
     container_name: openbao
     restart: unless-stopped
-    command: ["server", "-config=/openbao/config/openbao.hcl"]
+    command: ["server"]
     cap_add:
       - IPC_LOCK
     environment:
@@ -16,6 +25,9 @@ services:
       - ./policies:/openbao/policies:ro
     networks:
       - bao-net
+    depends_on:
+      openbao-perms:
+        condition: service_completed_successfully
 
   # Demo consumer. Start AFTER ./scripts/setup.sh has produced secrets/app.env
   demo-app:
